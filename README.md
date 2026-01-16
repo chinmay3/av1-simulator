@@ -15,10 +15,14 @@ Raw YUV
 Reads raw YUV420 video and parses frames using provided width, height, and frame rate.  
 Separates luma and chroma planes and prepares frames for block-based processing.
 
+![Part 1](gifs/1.gif)
+
 ## Part 2 — Adaptive Block Partitioning
 Splits each frame into variable-sized blocks.  
 Large blocks are used in low-detail regions, and smaller blocks are used near edges and high-detail areas.  
 This block structure is reused by all later stages.
+
+![Part 2](gifs/2.gif)
 
 ## Part 3 — Intra Prediction
 Performs spatial prediction using previously decoded neighboring pixels.  
@@ -30,6 +34,8 @@ Implemented prediction modes:
 
 The best mode is selected per block based on prediction error.
 
+![Part 3](gifs/3.gif)
+
 ## Part 4 — Inter Prediction
 Performs temporal prediction using previously decoded frames.
 - Motion estimation searches for matching blocks
@@ -38,10 +44,14 @@ Performs temporal prediction using previously decoded frames.
 
 This stage exploits temporal redundancy between frames.
 
+![Part 4](gifs/4.gif)
+
 ## Part 5 — Residual Computation
 Computes the residual:  
 `residual = original − prediction`  
 Most residual values are near zero when prediction is effective.
+
+![Part 5](gifs/5.gif)
 
 ## Part 6 — Transform & Quantization
 Applies a block-wise transform to residuals, followed by quantization.  
@@ -49,6 +59,8 @@ This stage:
 - Concentrates energy into low frequencies
 - Discards visually less important detail
 - Introduces controlled loss
+
+![Part 6](gifs/6.gif)
 
 ## Part 7 — Entropy Coding
 Serializes and entropy-codes transformed coefficients and metadata into a compact `.av1s` bitstream.  
