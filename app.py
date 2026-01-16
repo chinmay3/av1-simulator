@@ -22,6 +22,7 @@ CONFIG = {
     "yuv_height": 288,
     "yuv_fps": 30.0,
     "yuv_frames": 60,
+    "allow_sample_fallback": False,
     "output_av1s": os.path.join(OUTPUT_DIR, "output.av1s"),
     "output_mp4": os.path.join(OUTPUT_DIR, "decoded.mp4"),
     "block": 8,
@@ -35,6 +36,7 @@ JOBS = {
     "compress": {"state": "idle", "started": 0.0, "error": "", "output": 0},
     "decode": {"state": "idle", "started": 0.0, "error": "", "output": 0},
 }
+FETCH = {"state": "idle", "error": "", "output": 0}
 
 LOCK = threading.Lock()
 
@@ -165,6 +167,27 @@ def api_status(job_name):
     )
 
 
+@app.route("/api/fetch", methods=["POST"])
+def api_fetch():
+    with LOCK:
+        FETCH.update({"state": "running", "error": "", "output": 0})
+    if os.path.exists(CONFIG["input_yuv"]):
+        size = _file_size(CONFIG["input_yuv"])
+        with LOCK:
+            FETCH.update({"state": "done", "output": size})
+        return jsonify({"state": "done", "output": _human_size(size)})
+
+    ok, size = _download_yuv()
+    if ok:
+        with LOCK:
+            FETCH.update({"state": "done", "output": size})
+        return jsonify({"state": "done", "output": _human_size(size)})
+
+    with LOCK:
+        FETCH.update({"state": "error", "error": "Failed to fetch from R2"})
+    return jsonify({"state": "error", "error": "Failed to fetch from R2"})
+
+
 @app.route("/media/decoded.mp4")
 def media_decoded():
     if not os.path.exists(CONFIG["output_mp4"]):
@@ -174,29 +197,51 @@ def media_decoded():
 
 def _load_frames():
     if not os.path.exists(CONFIG["input_yuv"]):
-        _download_yuv()
+        ok, _size = _download_yuv()
+        if not ok and not CONFIG["allow_sample_fallback"]:
+            raise RuntimeError("Failed to download input.yuv from R2")
     if os.path.exists(CONFIG["input_yuv"]):
         return read_yuv420_frames(
             CONFIG["input_yuv"], CONFIG["yuv_width"], CONFIG["yuv_height"]
         )
-    return _generate_frames(CONFIG["yuv_frames"], CONFIG["yuv_width"], CONFIG["yuv_height"])
+    if CONFIG["allow_sample_fallback"]:
+        return _generate_frames(CONFIG["yuv_frames"], CONFIG["yuv_width"], CONFIG["yuv_height"])
+    raise RuntimeError("input.yuv missing and fallback disabled")
 
 
 def _source_size():
     if os.path.exists(CONFIG["input_yuv"]):
         return _file_size(CONFIG["input_yuv"])
-    return int(CONFIG["yuv_frames"] * CONFIG["yuv_width"] * CONFIG["yuv_height"] * 3 // 2)
+    if CONFIG["allow_sample_fallback"]:
+        return int(CONFIG["yuv_frames"] * CONFIG["yuv_width"] * CONFIG["yuv_height"] * 3 // 2)
+    return 0
 
 
 def _download_yuv():
     url = CONFIG.get("input_yuv_url", "")
     if not url:
-        return
+        return False, 0
     os.makedirs(os.path.dirname(CONFIG["input_yuv"]), exist_ok=True)
     try:
-        urllib.request.urlretrieve(url, CONFIG["input_yuv"])
-    except Exception:
-        pass
+        print(f"[fetch] downloading {url}")
+        size = 0
+        request = urllib.request.Request(
+            url,
+            headers={"User-Agent": "Mozilla/5.0 (AV1SIM)"},
+        )
+        with urllib.request.urlopen(request, timeout=120) as response:
+            with open(CONFIG["input_yuv"], "wb") as handle:
+                while True:
+                    chunk = response.read(1024 * 1024)
+                    if not chunk:
+                        break
+                    handle.write(chunk)
+                    size += len(chunk)
+        print(f"[fetch] saved {CONFIG['input_yuv']} ({size} bytes)")
+        return True, size
+    except Exception as exc:
+        print(f"[fetch] failed: {exc}")
+        return False, 0
 
 
 def _generate_frames(count, width, height):
