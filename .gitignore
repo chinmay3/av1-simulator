@@ -14,3 +14,4 @@ output.av1s
 decoded.mp4
 input.mp4
 grain.json
+.vercel
