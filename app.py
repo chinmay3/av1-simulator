@@ -1,6 +1,7 @@
 import os
 import threading
 import time
+import urllib.request
 
 import numpy as np
 from flask import Flask, jsonify, redirect, render_template, request, send_file, url_for
@@ -16,6 +17,7 @@ OUTPUT_DIR = "/tmp" if os.getenv("VERCEL") else BASE_DIR
 
 CONFIG = {
     "input_yuv": os.path.join(BASE_DIR, "input.yuv"),
+    "input_yuv_url": "https://pub-626a26b06170405fb665c942a12d0972.r2.dev/input.yuv",
     "yuv_width": 352,
     "yuv_height": 288,
     "yuv_fps": 30.0,
@@ -171,6 +173,8 @@ def media_decoded():
 
 
 def _load_frames():
+    if not os.path.exists(CONFIG["input_yuv"]):
+        _download_yuv()
     if os.path.exists(CONFIG["input_yuv"]):
         return read_yuv420_frames(
             CONFIG["input_yuv"], CONFIG["yuv_width"], CONFIG["yuv_height"]
@@ -182,6 +186,17 @@ def _source_size():
     if os.path.exists(CONFIG["input_yuv"]):
         return _file_size(CONFIG["input_yuv"])
     return int(CONFIG["yuv_frames"] * CONFIG["yuv_width"] * CONFIG["yuv_height"] * 3 // 2)
+
+
+def _download_yuv():
+    url = CONFIG.get("input_yuv_url", "")
+    if not url:
+        return
+    os.makedirs(os.path.dirname(CONFIG["input_yuv"]), exist_ok=True)
+    try:
+        urllib.request.urlretrieve(url, CONFIG["input_yuv"])
+    except Exception:
+        pass
 
 
 def _generate_frames(count, width, height):
