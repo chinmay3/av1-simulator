@@ -17,8 +17,8 @@ OUTPUT_DIR = "/tmp" if os.getenv("VERCEL") else BASE_DIR
 INPUT_DIR = OUTPUT_DIR
 
 CONFIG = {
-    "input_yuv": os.path.join(INPUT_DIR, "input.yuv"),
-    "input_yuv_url": "https://pub-626a26b06170405fb665c942a12d0972.r2.dev/input.yuv",
+    "input_yuv": os.path.join(INPUT_DIR, "small.yuv"),
+    "input_yuv_url": "https://pub-626a26b06170405fb665c942a12d0972.r2.dev/small.yuv",
     "yuv_width": 352,
     "yuv_height": 288,
     "yuv_fps": 30.0,
