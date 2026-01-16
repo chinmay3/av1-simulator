@@ -16,7 +16,6 @@ from .entropy import (
     read_entropy_stream,
     zigzag_indices,
 )
-from .grain import analyze_grain, apply_grain_to_base
 
 
 MAGIC = b"AV1S"
@@ -35,12 +34,9 @@ def encode_video(
     search_range=8,
     mode="full",
     transform="dct",
-    use_grain=False,
 ):
     if block_size % 2 != 0:
         raise ValueError("Block size must be even for 4:2:0")
-
-    grain_params = analyze_grain(frames[: min(30, len(frames))]) if use_grain else None
 
     with open(output_path, "wb") as handle:
         _write_header(
@@ -51,7 +47,7 @@ def encode_video(
             len(frames),
             block_size,
             transform,
-            grain_params,
+            None,
         )
 
         prev_rec = None
@@ -129,8 +125,6 @@ def decode_bitstream(input_path):
                 planes.append(plane_recon)
 
             y, u, v = planes
-            if header["grain_params"]:
-                y = _apply_grain(y, header["grain_params"])
             bgr = yuv420_to_bgr(y, u, v)
             frames.append(bgr)
             prev_rec = bgr
@@ -436,9 +430,6 @@ def _unpack_modes(data, count):
     return modes
 
 
-def _apply_grain(luma, params):
-    grain = apply_grain_to_base(luma.astype(np.float32), params, rng=np.random.default_rng(0))
-    return np.clip(grain, 0, 255).astype(np.uint8)
 
 
 def _forward_transform(block, mode):
