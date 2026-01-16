@@ -43,7 +43,7 @@ def write_video_frames(path, frames, fps):
     writer.release()
 
 
-def read_yuv420_frames(path, width, height):
+def read_yuv420_frames(path, width, height, allow_partial=False):
     if width <= 0 or height <= 0:
         raise ValueError("Width/height must be positive for YUV input")
 
@@ -82,6 +82,7 @@ def read_yuv420_frames(path, width, height):
 
     if len(data) % frame_size != 0:
         tail = len(data) - frame_count * frame_size
-        raise ValueError(f"YUV file has {tail} trailing bytes (size mismatch)")
+        if not allow_partial:
+            raise ValueError(f"YUV file has {tail} trailing bytes (size mismatch)")
 
     return frames

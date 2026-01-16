@@ -203,7 +203,10 @@ def _load_frames():
             raise RuntimeError("Failed to download input.yuv from R2")
     if os.path.exists(CONFIG["input_yuv"]):
         return read_yuv420_frames(
-            CONFIG["input_yuv"], CONFIG["yuv_width"], CONFIG["yuv_height"]
+            CONFIG["input_yuv"],
+            CONFIG["yuv_width"],
+            CONFIG["yuv_height"],
+            allow_partial=True,
         )
     if CONFIG["allow_sample_fallback"]:
         return _generate_frames(CONFIG["yuv_frames"], CONFIG["yuv_width"], CONFIG["yuv_height"])
