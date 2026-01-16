@@ -64,6 +64,14 @@ function pollStatus(job) {
           showFile(mp4File, document.getElementById("mp4Size"), data.output);
           if (player) {
             player.classList.remove("hidden");
+            const video = player.querySelector("video");
+            const source = video ? video.querySelector("source") : null;
+            if (video && source) {
+              const base = video.dataset.src || "/media/decoded.mp4";
+              source.src = `${base}?ts=${Date.now()}`;
+              video.load();
+              video.play().catch(() => {});
+            }
           }
         }
         return;

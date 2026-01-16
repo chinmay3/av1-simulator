@@ -35,8 +35,8 @@
             <em id="mp4Size">--</em>
           </div>
           <div class="player hidden" id="player">
-            <video controls muted autoplay loop>
-              <source src="{{ url_for('media_decoded') }}" type="video/mp4" />
+            <video controls muted autoplay loop data-src="{{ url_for('media_decoded') }}">
+              <source type="video/mp4" />
             </video>
           </div>
         </div>
